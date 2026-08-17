@@ -2,7 +2,7 @@ const express = require("express")
 const router = express.Router()
 
 const authmiddleware = require("../middleware/authmiddleware")
-const FlatController = require("../Controllers/FlatController")
+const FlatController = require("../controllers/FlatController")
 
 
 // http://localhost:3000/api/flat/create

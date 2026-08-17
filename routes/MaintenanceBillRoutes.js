@@ -2,7 +2,7 @@ const express = require("express")
 const router = express.Router()
 
 const authmiddleware = require("../middleware/authmiddleware")
-const MaintenanceBillController = require("../Controllers/MaintenanceBillController")
+const MaintenanceBillController = require("../controllers/MaintenanceBillController")
 
 
 // http://localhost:3000/api/maintenance/all

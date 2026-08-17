@@ -2,7 +2,7 @@ const express = require("express")
 const router = express.Router()
 
 const authmiddleware = require("../middleware/authmiddleware")
-const AmenityBookingController = require("../Controllers/AmenityBookingController")
+const AmenityBookingController = require("../controllers/AmenityBookingController")
 
 
 // http://localhost:3000/api/amenity-booking/availability

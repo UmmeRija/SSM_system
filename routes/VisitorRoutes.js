@@ -2,7 +2,7 @@ const express = require("express")
 const router = express.Router()
 
 const authmiddleware = require("../middleware/authmiddleware")
-const VisitorController = require("../Controllers/VisitorController")
+const VisitorController = require("../controllers/VisitorController")
 
 
 // http://localhost:3000/api/visitor/create

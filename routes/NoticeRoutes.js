@@ -2,7 +2,7 @@ const express = require("express")
 const router = express.Router()
 
 const authmiddleware = require("../middleware/authmiddleware")
-const NoticeController = require("../Controllers/NoticeController")
+const NoticeController = require("../controllers/NoticeController")
 
 
 // http://localhost:3000/api/notice/create
