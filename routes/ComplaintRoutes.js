@@ -1,6 +1,6 @@
 const express = require("express")
 const router = express.Router()
-const complaintCntroller = require("../controllers/ComplaintContrpller")
+const complaintCntroller = require("../controllers/ComplaintController")
 const authmiddleware = require("../middleware/authmiddleware")
 const upload = require("../middleware/upload")
 

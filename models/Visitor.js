@@ -32,6 +32,10 @@ const visitorSchema = new Schema({
     },
     qrCode: {
         type: String,
+        default: null
+    },
+    passCode: {
+        type: String,
         unique: true,
         default: null
     },
@@ -63,3 +67,24 @@ const visitorSchema = new Schema({
 )
 
 module.exports = mongoose.model('visitor', visitorSchema)
+
+// Drop the old unique index on qrCode if it exists.
+// qrCode is no longer marked unique in the schema because multiple pending
+// visitors can legitimately share qrCode: null before approval.
+;(async () => {
+    try {
+        if (mongoose.connection.readyState === 1) {
+            await mongoose.connection.db.collection('visitors').dropIndex('qrCode_1');
+        } else {
+            mongoose.connection.once('open', async () => {
+                try {
+                    await mongoose.connection.db.collection('visitors').dropIndex('qrCode_1');
+                } catch (err) {
+                    // ignore if index does not exist
+                }
+            });
+        }
+    } catch (err) {
+        // ignore if index does not exist
+    }
+})();

@@ -1,5 +1,23 @@
 const Visitor = require("../models/Visitor")
 const QRCode = require("qrcode")
+const { safeFindWithPopulate, safeFindByIdWithPopulate, isValidObjectId } = require('../utils/safeQuery')
+
+function mapVisitorToFrontend(visitor) {
+    if (!visitor) return null
+    const obj = typeof visitor.toObject === 'function' ? visitor.toObject() : { ...visitor }
+    return {
+        ...obj,
+        vehicleNumber: obj.vehicleNumber || obj.vehicleNo || '—',
+        validFrom: obj.validFrom || obj.entryTime,
+        validTo: obj.validTo || obj.exitTime,
+        passCode: obj.passCode || obj.qrCode || '',
+        status: obj.status === 'approved' ? 'Active' : obj.status || 'Active',
+    }
+}
+
+function generatePassCode() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase()
+}
 
 const VisitorController = {
 
@@ -10,36 +28,50 @@ const VisitorController = {
             name,
             phone,
             vehicleNo,
+            vehicleNumber,
             entryTime,
+            validFrom,
             exitTime,
+            validTo,
             purpose
         } = req.body
 
         try {
 
-            if (!flatId || !name || !phone || !entryTime || !exitTime) {
+            // Map frontend field names to backend model fields (accept both conventions)
+            const resolvedVehicleNo = vehicleNo || vehicleNumber || null
+            const resolvedEntryTime = entryTime || validFrom
+            const resolvedExitTime = exitTime || validTo
+            const passCode = generatePassCode()
+
+            if (!flatId || !name || !phone || !resolvedEntryTime || !resolvedExitTime) {
                 return res.json({
                     message: "Required fields are missing",
                     status: false
                 })
             }
 
+            const qrData = `VISITOR-${passCode}-${Date.now()}`
+            const qrCode = await QRCode.toDataURL(qrData)
+
             let visitor = await Visitor.create({
                 flatId,
                 name,
                 phone,
-                vehicleNo,
-                entryTime,
-                exitTime,
+                vehicleNo: resolvedVehicleNo,
+                entryTime: resolvedEntryTime,
+                exitTime: resolvedExitTime,
                 purpose,
+                passCode,
+                qrCode,
                 generatedBy: req.user.id,
-                status: "pending"
+                status: "approved"
             })
 
             return res.json({
-                message: "Visitor pre-approval request created successfully",
+                message: "Visitor pass generated successfully",
                 status: true,
-                visitor
+                visitor: mapVisitorToFrontend(visitor)
             })
 
         } catch (error) {
@@ -57,7 +89,7 @@ const VisitorController = {
 
         try {
 
-            let visitor = await Visitor.findById(visitorId)
+            let visitor = await safeFindByIdWithPopulate(Visitor, visitorId, [])
 
             if (!visitor) {
                 return res.json({
@@ -94,7 +126,7 @@ const VisitorController = {
             return res.json({
                 message: "Visitor approved and QR gate pass generated successfully",
                 status: true,
-                visitor
+                visitor: mapVisitorToFrontend(visitor)
             })
 
         } catch (error) {
@@ -112,7 +144,7 @@ const VisitorController = {
 
         try {
 
-            let visitor = await Visitor.findById(visitorId)
+            let visitor = await safeFindByIdWithPopulate(Visitor, visitorId, [])
 
             if (!visitor) {
                 return res.json({
@@ -136,7 +168,7 @@ const VisitorController = {
             return res.json({
                 message: "Visitor rejected successfully",
                 status: true,
-                visitor
+                visitor: mapVisitorToFrontend(visitor)
             })
 
         } catch (error) {
@@ -152,19 +184,15 @@ const VisitorController = {
     approvedVisitors: async (req, res) => {
         try {
 
-            let visitors = await Visitor.find({
+            let visitors = await safeFindWithPopulate(Visitor, {
                 status: "approved"
-            })
-                .populate("flatId")
-                .populate("generatedBy")
-                .populate("verifiedBy")
-                .sort({ createdAt: -1 })
+            }, ['flatId', 'generatedBy', 'verifiedBy'])
 
             if (visitors.length > 0) {
                 return res.json({
                     message: "Approved visitors get successfully",
                     status: true,
-                    visitors
+                    visitors: visitors.map(mapVisitorToFrontend)
                 })
             } else {
                 return res.json({
@@ -188,19 +216,15 @@ const VisitorController = {
 
         try {
 
-            let visitors = await Visitor.find({
+            let visitors = await safeFindWithPopulate(Visitor, {
                 flatId
-            })
-                .populate("flatId")
-                .populate("generatedBy")
-                .populate("verifiedBy")
-                .sort({ createdAt: -1 })
+            }, ['flatId', 'generatedBy', 'verifiedBy'])
 
             if (visitors.length > 0) {
                 return res.json({
                     message: "Flat visitors get successfully",
                     status: true,
-                    visitors
+                    visitors: visitors.map(mapVisitorToFrontend)
                 })
             } else {
                 return res.json({
@@ -224,16 +248,13 @@ const VisitorController = {
 
         try {
 
-            let visitor = await Visitor.findById(visitorId)
-                .populate("flatId")
-                .populate("generatedBy")
-                .populate("verifiedBy")
+            let visitor = await safeFindByIdWithPopulate(Visitor, visitorId, ['flatId', 'generatedBy', 'verifiedBy'])
 
             if (visitor) {
                 return res.json({
                     message: "Visitor get successfully",
                     status: true,
-                    visitor
+                    visitor: mapVisitorToFrontend(visitor)
                 })
             } else {
                 return res.json({
@@ -264,17 +285,21 @@ const VisitorController = {
                 })
             }
 
-            let visitor = await Visitor.findOne({
-                qrCode
-            })
-                .populate("flatId")
+            let visitor = await safeFindWithPopulate(Visitor, {
+                $or: [
+                    { passCode: qrCode },
+                    { qrCode }
+                ]
+            }, ['flatId'])
 
-            if (!visitor) {
+            if (!visitor || visitor.length === 0) {
                 return res.json({
                     message: "Invalid QR gate pass",
                     status: false
                 })
             }
+
+            visitor = visitor[0]
 
             if (visitor.status !== "approved") {
                 return res.json({
@@ -288,8 +313,8 @@ const VisitorController = {
             if (currentTime < visitor.entryTime) {
                 return res.json({
                     message: "Visitor entry time has not started yet",
-                    status: false,
-                    visitor
+                    status: true,
+                    visitor: mapVisitorToFrontend(visitor)
                 })
             }
 
@@ -302,14 +327,14 @@ const VisitorController = {
                     message: "Gate pass has expired",
                     status: false,
                     overstayAlert: true,
-                    visitor
+                    visitor: mapVisitorToFrontend(visitor)
                 })
             }
 
             return res.json({
                 message: "QR gate pass verified successfully",
                 status: true,
-                visitor
+                visitor: mapVisitorToFrontend(visitor)
             })
 
         } catch (error) {
@@ -327,7 +352,7 @@ const VisitorController = {
 
         try {
 
-            let visitor = await Visitor.findById(visitorId)
+            let visitor = await safeFindByIdWithPopulate(Visitor, visitorId, [])
 
             if (!visitor) {
                 return res.json({
@@ -351,7 +376,7 @@ const VisitorController = {
             return res.json({
                 message: "Visitor exit recorded successfully",
                 status: true,
-                visitor
+                visitor: mapVisitorToFrontend(visitor)
             })
 
         } catch (error) {
@@ -367,17 +392,13 @@ const VisitorController = {
     all: async (req, res) => {
         try {
 
-            let visitors = await Visitor.find({})
-                .populate("flatId")
-                .populate("generatedBy")
-                .populate("verifiedBy")
-                .sort({ createdAt: -1 })
+            let visitors = await safeFindWithPopulate(Visitor, {}, ['flatId', 'generatedBy', 'verifiedBy'])
 
             if (visitors.length > 0) {
                 return res.json({
                     message: "All visitors get successfully",
                     status: true,
-                    visitors
+                    visitors: visitors.map(mapVisitorToFrontend)
                 })
             } else {
                 return res.json({

@@ -1,4 +1,29 @@
 const AmenityBooking = require("../models/AmenityBooking")
+const { safeFindWithPopulate, safeFindByIdWithPopulate, isValidObjectId } = require('../utils/safeQuery')
+
+function parseTimeToMinutes(value) {
+    if (!value) return 0;
+    const match = String(value).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+    if (!match) return 0;
+
+    let hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    const meridiem = (match[3] || '').toUpperCase();
+
+    if (meridiem === 'AM' && hours === 12) hours = 0;
+    if (meridiem === 'PM' && hours !== 12) hours += 12;
+
+    return hours * 60 + minutes;
+}
+
+function hasTimeOverlap(startA, endA, startB, endB) {
+    const startAT = parseTimeToMinutes(startA);
+    const endAT = parseTimeToMinutes(endA);
+    const startBT = parseTimeToMinutes(startB);
+    const endBT = parseTimeToMinutes(endB);
+
+    return startAT < endBT && endAT > startBT;
+}
 
 const AmenityBookingController = {
 
@@ -20,17 +45,15 @@ const AmenityBookingController = {
                 })
             }
 
-            let existingBooking = await AmenityBooking.findOne({
+            const sameDayBookings = await AmenityBooking.find({
                 amenity,
                 date: new Date(date),
-                status: { $in: ["pending", "approved"] },
-                $or: [
-                    {
-                        startTime: { $lt: endTime },
-                        endTime: { $gt: startTime }
-                    }
-                ]
+                status: { $in: ["pending", "approved"] }
             })
+
+            const existingBooking = sameDayBookings.find((booking) =>
+                hasTimeOverlap(startTime, endTime, booking.startTime, booking.endTime)
+            )
 
             if (existingBooking) {
                 return res.json({
@@ -77,18 +100,15 @@ const AmenityBookingController = {
                 })
             }
 
-            // Check overlapping booking
-            let existingBooking = await AmenityBooking.findOne({
+            const sameDayBookings = await AmenityBooking.find({
                 amenity,
                 date: new Date(date),
-                status: { $in: ["pending", "approved"] },
-                $or: [
-                    {
-                        startTime: { $lt: endTime },
-                        endTime: { $gt: startTime }
-                    }
-                ]
+                status: { $in: ["pending", "approved"] }
             })
+
+            const existingBooking = sameDayBookings.find((booking) =>
+                hasTimeOverlap(startTime, endTime, booking.startTime, booking.endTime)
+            )
 
             if (existingBooking) {
                 return res.json({
@@ -127,12 +147,9 @@ const AmenityBookingController = {
     myBookings: async (req, res) => {
         try {
 
-            let bookings = await AmenityBooking.find({
+            let bookings = await safeFindWithPopulate(AmenityBooking, {
                 residentId: req.user.id
-            })
-                .populate("flatId")
-                .populate("approvedBy")
-                .sort({ date: -1 })
+            }, ['flatId', 'approvedBy'])
 
             if (bookings.length > 0) {
                 return res.json({
@@ -160,11 +177,7 @@ const AmenityBookingController = {
     all: async (req, res) => {
         try {
 
-            let bookings = await AmenityBooking.find({})
-                .populate("residentId")
-                .populate("flatId")
-                .populate("approvedBy")
-                .sort({ date: -1 })
+            let bookings = await safeFindWithPopulate(AmenityBooking, {}, ['residentId', 'flatId', 'approvedBy'])
 
             if (bookings.length > 0) {
                 return res.json({
@@ -194,10 +207,7 @@ const AmenityBookingController = {
 
         try {
 
-            let booking = await AmenityBooking.findById(bookingId)
-                .populate("residentId")
-                .populate("flatId")
-                .populate("approvedBy")
+            let booking = await safeFindByIdWithPopulate(AmenityBooking, bookingId, ['residentId', 'flatId', 'approvedBy'])
 
             if (booking) {
                 return res.json({
@@ -227,7 +237,7 @@ const AmenityBookingController = {
 
         try {
 
-            let booking = await AmenityBooking.findById(bookingId)
+            let booking = await safeFindByIdWithPopulate(AmenityBooking, bookingId, [])
 
             if (!booking) {
                 return res.json({
@@ -297,7 +307,7 @@ const AmenityBookingController = {
 
         try {
 
-            let booking = await AmenityBooking.findById(bookingId)
+            let booking = await safeFindByIdWithPopulate(AmenityBooking, bookingId, [])
 
             if (!booking) {
                 return res.json({
@@ -345,7 +355,7 @@ const AmenityBookingController = {
 
         try {
 
-            let booking = await AmenityBooking.findById(bookingId)
+            let booking = await safeFindByIdWithPopulate(AmenityBooking, bookingId, [])
 
             if (!booking) {
                 return res.json({

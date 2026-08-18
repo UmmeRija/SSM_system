@@ -25,8 +25,13 @@ router.get("/single/:id", authmiddleware, MaintenanceBillController.getSingleBil
 router.put("/pay/:id", authmiddleware, MaintenanceBillController.payBill)
 
 
-// http://localhost:3000/api/maintenance/receipt/BILL_ID
-router.get("/receipt/:id", authmiddleware, MaintenanceBillController.downloadReceipt)
+// http://localhost:3000/api/maintenance/generate
+router.post("/generate", authmiddleware, MaintenanceBillController.generateBills)
 
+// http://localhost:3000/api/maintenance/penalties
+router.post("/penalties", authmiddleware, MaintenanceBillController.applyPenalties)
+
+// http://localhost:3000/api/maintenance/collection-report
+router.get("/collection-report", authmiddleware, MaintenanceBillController.collectionReport)
 
 module.exports = router

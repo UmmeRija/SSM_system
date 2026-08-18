@@ -1,4 +1,5 @@
 const Notice = require("../models/Notice")
+const { safeFindWithPopulate, safeFindByIdWithPopulate, isValidObjectId } = require('../utils/safeQuery')
 
 const NoticeController = {
 
@@ -7,29 +8,41 @@ const NoticeController = {
         let {
             title,
             content,
+            body,
             type,
+            category,
             priority,
+            pinned,
+            isActive,
             expiresAt,
             attachments
         } = req.body
 
         try {
+            const finalBody = body || content || '';
 
-            if (!title || !content) {
+            if (!title || !finalBody) {
                 return res.json({
                     message: "Required fields are missing",
                     status: false
                 })
             }
 
+            const finalType = type || (category === 'Security' ? 'emergency' : category === 'Event' ? 'event' : 'normal');
+            const finalCategory = category || (finalType === 'emergency' ? 'Security' : finalType === 'event' ? 'Event' : 'General');
+
             let notice = await Notice.create({
                 title,
-                content,
+                body: finalBody,
+                content: finalBody,
                 createdBy: req.user.id,
-                type,
-                priority,
+                type: finalType,
+                category: finalCategory,
+                priority: priority || (pinned ? 'high' : 'medium'),
+                pinned: !!pinned,
+                isActive: isActive !== undefined ? isActive : true,
                 expiresAt,
-                attachments
+                attachments: attachments || []
             })
 
             return res.json({
@@ -51,24 +64,15 @@ const NoticeController = {
     all: async (req, res) => {
         try {
 
-            let notices = await Notice.find({
+            let notices = await safeFindWithPopulate(Notice, {
                 isActive: true
-            })
-                .populate("createdBy")
-                .sort({ createdAt: -1 })
+            }, ['createdBy'])
 
-            if (notices.length > 0) {
-                return res.json({
-                    message: "All notices get successfully",
-                    status: true,
-                    notices
-                })
-            } else {
-                return res.json({
-                    message: "No notices found",
-                    status: false
-                })
-            }
+            return res.json({
+                message: notices.length > 0 ? "All notices get successfully" : "No notices found",
+                status: true,
+                notices: notices || []
+            })
 
         } catch (error) {
             res.json({
@@ -83,22 +87,13 @@ const NoticeController = {
     allNotices: async (req, res) => {
         try {
 
-            let notices = await Notice.find({})
-                .populate("createdBy")
-                .sort({ createdAt: -1 })
+            let notices = await safeFindWithPopulate(Notice, {}, ['createdBy'])
 
-            if (notices.length > 0) {
-                return res.json({
-                    message: "All notices get successfully",
-                    status: true,
-                    notices
-                })
-            } else {
-                return res.json({
-                    message: "No notices found",
-                    status: false
-                })
-            }
+            return res.json({
+                message: notices.length > 0 ? "All notices get successfully" : "No notices found",
+                status: true,
+                notices: notices || []
+            })
 
         } catch (error) {
             res.json({
@@ -115,8 +110,7 @@ const NoticeController = {
 
         try {
 
-            let notice = await Notice.findById(noticeId)
-                .populate("createdBy")
+            let notice = await safeFindByIdWithPopulate(Notice, noticeId, ['createdBy'])
 
             if (notice) {
 
@@ -152,12 +146,10 @@ const NoticeController = {
 
         try {
 
-            let notices = await Notice.find({
+            let notices = await safeFindWithPopulate(Notice, {
                 type,
                 isActive: true
-            })
-                .populate("createdBy")
-                .sort({ createdAt: -1 })
+            }, ['createdBy'])
 
             if (notices.length > 0) {
                 return res.json({
@@ -186,6 +178,13 @@ const NoticeController = {
         let noticeId = req.params.id
 
         try {
+
+            if (!noticeId || !isValidObjectId(noticeId)) {
+                return res.json({
+                    message: "Invalid ID",
+                    status: false
+                })
+            }
 
             let notice = await Notice.findByIdAndUpdate(
                 noticeId,
@@ -222,6 +221,13 @@ const NoticeController = {
         let noticeId = req.params.id
 
         try {
+
+            if (!noticeId || !isValidObjectId(noticeId)) {
+                return res.json({
+                    message: "Invalid ID",
+                    status: false
+                })
+            }
 
             let notice = await Notice.findByIdAndUpdate(
                 noticeId,
@@ -261,6 +267,13 @@ const NoticeController = {
 
         try {
 
+            if (!noticeId || !isValidObjectId(noticeId)) {
+                return res.json({
+                    message: "Invalid ID",
+                    status: false
+                })
+            }
+
             let notice = await Notice.findByIdAndUpdate(
                 noticeId,
                 {
@@ -299,9 +312,14 @@ const NoticeController = {
 
         try {
 
-            let notice = await Notice.findByIdAndDelete({
-                _id: noticeId
-            })
+            if (!noticeId || !isValidObjectId(noticeId)) {
+                return res.json({
+                    message: "Invalid ID",
+                    status: false
+                })
+            }
+
+            let notice = await Notice.findByIdAndDelete(noticeId)
 
             if (notice) {
                 return res.json({

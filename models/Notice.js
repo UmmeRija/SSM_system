@@ -5,9 +5,18 @@ const noticeSchema = new Schema({
         type: String,
         required: true
     },
+    body: {
+        type: String,
+        default: ''
+    },
     content: {
         type: String,
-        required: true
+        default: ''
+    },
+    category: {
+        type: String,
+        enum: ['General', 'Maintenance', 'Event', 'Security', 'Urgent', 'Emergency', 'Other'],
+        default: 'General'
     },
     createdBy: {
         type: Schema.Types.ObjectId,
@@ -16,7 +25,7 @@ const noticeSchema = new Schema({
     },
     type: {
         type: String,
-        enum: ['normal', 'emergency', 'event', 'guideline'],
+        enum: ['normal', 'emergency', 'event', 'guideline', 'General', 'Maintenance', 'Security', 'Urgent', 'Other'],
         default: 'normal'
     },
     priority: {
@@ -24,12 +33,16 @@ const noticeSchema = new Schema({
         enum: ['low', 'medium', 'high'],
         default: 'medium'
     },
+    pinned: {
+        type: Boolean,
+        default: false
+    },
     expiresAt: {
         type: Date,
         default: null
     },
     attachments: {
-        type: [String], // array of image/file URLs
+        type: [String],
         default: []
     },
     isActive: {

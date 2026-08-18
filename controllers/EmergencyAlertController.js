@@ -1,4 +1,4 @@
-const EmergencyAlert = require('../models/EmergencyAlert ');
+const EmergencyAlert = require('../models/EmergencyAlert');
 const { safeFindWithPopulate, safeFindByIdWithPopulate, isValidObjectId } = require('../utils/safeQuery');
 
 const EmergencyAlertController = {
@@ -96,7 +96,6 @@ const EmergencyAlertController = {
     },
 
     directory: async (req, res) => {
-        // Return structured directory list
         return res.json({
             status: true,
             directory: [

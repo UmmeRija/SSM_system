@@ -10,7 +10,7 @@ router.post("/create", authmiddleware, FlatController.create)
 
 
 // http://localhost:3000/api/flat/all
-router.get("/all",authmiddleware, FlatController.all)
+router.get("/all", FlatController.all)
 
 
 // http://localhost:3000/api/flat/single/FLAT_ID

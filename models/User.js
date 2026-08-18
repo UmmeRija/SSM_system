@@ -16,7 +16,7 @@ const userSchema = new Schema({
     },
     role: {
         type: String,
-        enum: ['admin', 'resident', 'security', 'staff'],
+        enum: ['admin', 'resident', 'security', 'guard', 'staff'],
         default: 'resident'
     },
     flatId: {

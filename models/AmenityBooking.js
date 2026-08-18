@@ -13,8 +13,8 @@ const amenityBookingSchema = new Schema({
     },
     amenity: {
         type: String,
-        enum: ['clubhouse', 'swimming_pool', 'tennis_court', 'party_hall', 'gym', 'garden'],
-        required: true
+        required: true,
+        trim: true
     },
     date: {
         type: Date,

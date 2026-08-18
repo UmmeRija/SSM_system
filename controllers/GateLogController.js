@@ -4,7 +4,7 @@ const { safeFindWithPopulate, safeFindByIdWithPopulate, isValidObjectId } = requ
 
 const GateLogController = {
     create: async (req, res) => {
-        const { flatId, visitorId, action, remarks, gateNumber } = req.body;
+        const { flatId, visitorId, action, remarks, gateNumber, name, phone, vehicleNumber, type } = req.body;
         try {
             if (!flatId || !action) {
                 return res.json({
@@ -19,7 +19,12 @@ const GateLogController = {
                 guardId: req.user.id,
                 action,
                 remarks,
-                gateNumber: gateNumber || 'Main Gate'
+                gateNumber: gateNumber || 'Main Gate',
+                name: name || null,
+                phone: phone || null,
+                vehicleNumber: vehicleNumber || null,
+                type: type || null,
+                overstay: false
             });
 
             return res.json({
@@ -65,9 +70,9 @@ const GateLogController = {
 
             log.action = 'exit';
             log.timestamp = new Date();
+            log.checkOut = new Date();
             await log.save();
 
-            // Mark Visitor as exited too if visitorId is attached
             if (log.visitorId) {
                 await Visitor.findByIdAndUpdate(log.visitorId, { status: 'exited', exitTime: new Date() });
             }
@@ -82,6 +87,25 @@ const GateLogController = {
                 message: error.message,
                 status: false
             });
+        }
+    },
+
+    flagOverstay: async (req, res) => {
+        const logId = req.params.id;
+        const { overstay } = req.body;
+        try {
+            if (!logId || !isValidObjectId(logId)) {
+                return res.json({ message: "Invalid log ID", status: false });
+            }
+            const log = await GateLog.findByIdAndUpdate(
+                logId,
+                { overstay: overstay !== false },
+                { new: true }
+            );
+            if (!log) return res.json({ message: "Log not found", status: false });
+            return res.json({ status: true, message: "Overstay flag updated", log });
+        } catch (error) {
+            return res.json({ message: error.message, status: false });
         }
     }
 };
