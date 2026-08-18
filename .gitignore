@@ -1,0 +1,56 @@
+# -------------------------------------------------------------------
+# Dependencies (Never commit node_modules)
+# -------------------------------------------------------------------
+node_modules/
+jspm_packages/
+web_modules/
+
+# -------------------------------------------------------------------
+# Environment Variables & Secrets (CRITICAL: Never commit api keys)
+# -------------------------------------------------------------------
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# -------------------------------------------------------------------
+# Logs and Runtime Data
+# -------------------------------------------------------------------
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# -------------------------------------------------------------------
+# Testing and Coverage Reports
+# -------------------------------------------------------------------
+coverage/
+.nyc_output/
+
+# -------------------------------------------------------------------
+# Build and TypeScript Outputs (If compiling to JS)
+# -------------------------------------------------------------------
+dist/
+build/
+out/
+tsbuildinfo/
+
+# -------------------------------------------------------------------
+# IDE, Editors, and OS-Specific Files
+# -------------------------------------------------------------------
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db

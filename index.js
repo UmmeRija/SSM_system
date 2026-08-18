@@ -42,9 +42,6 @@ app.use(cors({
 app.use(express.json())
 app.use(cookieParser())
 
-// Serve receipts static directory
-app.use('/receipts', express.static(path.join(__dirname, 'receipts')))
-
 app.get("/", (req, res) => {
     res.status(200).json({
         success: true,
@@ -52,6 +49,9 @@ app.get("/", (req, res) => {
         version: "1.0.0"
     });
 });
+// Serve receipts static directory
+app.use('/receipts', express.static(path.join(__dirname, 'receipts')))
+
 
 app.use("/api/user", UserRoutes)
 app.use("/api/visitor", VisitorRoutes)
